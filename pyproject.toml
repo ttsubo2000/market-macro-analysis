@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "market-macro-analysis"
+version = "0.1.0"
+description = "日銀マクロ経済モニタリング＆予測ツール"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pandas>=2.3.3",
+    "requests>=2.32.5",
+    "setuptools>=80.9.0",
+    "sqlalchemy>=2.0.44",
+    "matplotlib>=3.10.0",
+    "japanize-matplotlib>=1.1.3",
+    "scikit-learn>=1.6.0",
+    "statsmodels>=0.14.0",
+    "yfinance>=0.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["market_macro_analysis*"]
+exclude = ["tests*", "report*"]
