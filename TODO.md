@@ -12,11 +12,11 @@
 
 ## Phase 1: MVP（現状モニタリング）branch: `phase/1-mvp-monitoring`
 
-### REQ-1: コアCPI データ取得・DB保存（e-Stat API）Issue #1
-- [ ] `estat-api.toml` から API キー読み込み
-- [ ] e-Stat API からコアCPI（前年比）取得
-- [ ] `price_data` テーブルに保存
-- [ ] ユニットテスト
+### REQ-1: コアCPI データ取得・DB保存（e-Stat API）Issue #1 PR #6 ✅
+- [x] `estat-api.toml` から API キー読み込み
+- [x] e-Stat API からコアCPI（前年比）取得
+- [x] `price_data` テーブルに保存
+- [x] ユニットテスト（12件）・e2e テスト（1件）
 
 ### REQ-2: 政策金利 データ取得・DB保存（日銀CSV）Issue #2
 - [ ] 日銀CSV を自動ダウンロード・パース
