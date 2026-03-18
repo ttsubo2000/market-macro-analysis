@@ -19,7 +19,7 @@ ESTAT_API_CONFIG_PATH = os.environ.get("ESTAT_API_CONFIG_PATH", "estat-api.toml"
 # API endpoints
 ESTAT_API_BASE_URL = "https://api.e-stat.go.jp/rest/3.0/app"
 BOJ_STATS_BASE_URL = "https://www.stat-search.boj.or.jp"
-BOJ_CALL_RATE_CSV_URL = "https://www.stat-search.boj.or.jp/ssi/mtshtml/fm02_m_1.csv"
+BOJ_CALL_RATE_CSV_URL = "https://www.stat-search.boj.or.jp/ssi/mtshtml/csv/fm02_m_1.csv"
 CAO_GDP_BASE_URL = "https://www5.cao.go.jp/keizai3/getsurei"
 
 # e-Stat 統計ID

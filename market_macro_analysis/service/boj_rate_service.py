@@ -31,8 +31,12 @@ def fetch_policy_rate(limit: int = 120) -> list[dict]:
 def _parse_csv(content: bytes) -> list[dict]:
     """日銀CSV（Shift-JIS）をパースして日付・値のリストを返す。
 
-    対応フォーマット（YYYY/MM, 値）形式の行のみを抽出する。
-    ヘッダー・メタデータ行はスキップする。
+    CSV フォーマット（fm02_m_1.csv）:
+      列0: YYYY/MM（日付）
+      列1: 月末値
+      列2: 月平均値  ← こちらを使用
+
+    ヘッダー・メタデータ行は YYYY/MM 形式に一致しないためスキップされる。
     """
     try:
         text = content.decode("cp932")
@@ -46,11 +50,11 @@ def _parse_csv(content: bytes) -> list[dict]:
             continue
 
         parts = [p.strip().strip('"') for p in line.split(",")]
-        if len(parts) < 2:
+        if len(parts) < 3:
             continue
 
         date_part = parts[0]
-        value_part = parts[1]
+        value_part = parts[2]  # 月平均値（列2）
 
         # YYYY/MM 形式の日付のみ対象とする
         if "/" not in date_part:
