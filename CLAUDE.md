@@ -37,9 +37,24 @@ uv run pytest -k "test_name"       # 特定テスト
 
 ### E2E テスト（手動実行）
 
+**前提条件**: `estat-api.toml` がプロジェクトルートに存在すること
+
 ```bash
+# E2E テスト全ステージ実行
 uv run pytest tests/e2e/ -m e2e -v -s
+
+# 特定ステージのみ実行（例: test_01 のみ）
+uv run pytest tests/e2e/ -m e2e -v -s -k "test_01"
+
+# カバレッジなしで実行
+uv run pytest tests/e2e/ -m e2e -v -s --no-cov
 ```
+
+**テストステージ一覧**
+
+| ステージ | テスト名 | 内容 |
+|---------|---------|------|
+| 1 | test_01_fetch_price_data | e-Stat API からコアCPI取得・DB保存 |
 
 ## アーキテクチャ
 

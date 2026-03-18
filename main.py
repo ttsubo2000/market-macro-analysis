@@ -8,6 +8,7 @@ from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from market_macro_analysis.exceptions import MacroAnalysisError
 from market_macro_analysis.config import DB_NAME, COMMAND_LOG_PATH
+from market_macro_analysis.controller import fetch_controller
 
 STAGE_TYPES = [
     "fetch_data",
@@ -26,8 +27,8 @@ BLOCK_TYPES = [
 def stage_action(stage_type, block_type):
     with sqlite3.connect(DB_NAME, isolation_level=None) as conn_db:
         if stage_type == "fetch_data":
-            # TODO: Phase 1 実装
-            raise NotImplementedError(f"stage_type={stage_type} は未実装です")
+            if block_type in ("all", "price"):
+                fetch_controller.fetch_price_data(conn_db)
         elif stage_type == "make_chart":
             # TODO: Phase 1 実装
             raise NotImplementedError(f"stage_type={stage_type} は未実装です")
