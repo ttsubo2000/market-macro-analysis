@@ -8,7 +8,7 @@ from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from market_macro_analysis.exceptions import MacroAnalysisError
 from market_macro_analysis.config import DB_NAME, COMMAND_LOG_PATH
-from market_macro_analysis.controller import fetch_controller
+from market_macro_analysis.controller import fetch_controller, chart_controller, report_controller
 
 STAGE_TYPES = [
     "fetch_data",
@@ -29,12 +29,14 @@ def stage_action(stage_type, block_type):
         if stage_type == "fetch_data":
             if block_type in ("all", "price"):
                 fetch_controller.fetch_price_data(conn_db)
+            if block_type in ("all", "financial"):
+                fetch_controller.fetch_financial_data(conn_db)
+            if block_type in ("all", "economic"):
+                fetch_controller.fetch_economic_data(conn_db)
         elif stage_type == "make_chart":
-            # TODO: Phase 1 実装
-            raise NotImplementedError(f"stage_type={stage_type} は未実装です")
+            chart_controller.make_chart(conn_db, block_type)
         elif stage_type == "make_report":
-            # TODO: Phase 1 実装
-            raise NotImplementedError(f"stage_type={stage_type} は未実装です")
+            report_controller.make_report(conn_db, block_type)
         else:
             raise ValueError(f"Invalid stage_type: {stage_type}")
 
