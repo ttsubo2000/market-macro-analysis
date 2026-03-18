@@ -17,9 +17,11 @@ htmlcov/
 *.csv
 *.png
 *.pdf
+!docs/**/*.png
 .DS_Store
 report/
 logs/*
 !logs/.gitkeep
 
 macro_analysis.db
+estat-api.toml
