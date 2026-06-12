@@ -79,7 +79,12 @@ def _parse_meta_response(data: dict) -> dict:
         class_map[obj_id] = {c.get("@code", ""): c.get("@name", "") for c in classes}
 
     tab_code = _find_code_by_keyword(class_map.get("tab", {}), "前年比")
-    cat01_code = _find_code_by_keyword(class_map.get("cat01", {}), "就業形態計")
+    cat01_map = class_map.get("cat01", {})
+    cat01_code = (
+        _find_code_by_keyword(cat01_map, "就業形態計")
+        or _find_code_by_keyword(cat01_map, "就業形態別計")
+        or _find_code_by_keyword(cat01_map, "就業形態_計")
+    )
     cat02_map = class_map.get("cat02", {})
     cat02_code = (
         _find_code_by_keyword(cat02_map, "産業計")
@@ -91,7 +96,11 @@ def _parse_meta_response(data: dict) -> dict:
 
     missing = [k for k, v in [("tab", tab_code), ("cat01", cat01_code), ("cat02", cat02_code), ("cat03", cat03_code)] if v is None]
     if missing:
-        raise FetchError(f"getMetaInfo から必要なコードが解決できませんでした: {missing}")
+        available = {k: list(v.values())[:5] for k, v in class_map.items()}
+        raise FetchError(
+            f"getMetaInfo から必要なコードが解決できませんでした: {missing}\n"
+            f"利用可能なカテゴリ名称（先頭5件）: {available}"
+        )
 
     return {"tab": tab_code, "cat01": cat01_code, "cat02": cat02_code, "cat03": cat03_code}
 
