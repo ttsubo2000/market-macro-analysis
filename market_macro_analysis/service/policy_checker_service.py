@@ -104,6 +104,77 @@ def check_rate_hike_conditions(conn: sqlite3.Connection) -> PolicyCheckResult:
     )
 
 
+def check_conditions_from_values(
+    gdp_gap: float | None,
+    core_cpi: float | None,
+    expected_inflation: float | None,
+    wage: float | None,
+    policy_rate: float | None,
+) -> PolicyCheckResult:
+    """5指標を直接受け取り、DBを使わずに利上げ条件を評価する。
+
+    シナリオ比較など仮定値での評価に使用する。
+    条件評価ロジックは check_rate_hike_conditions() と共通。
+    """
+    real_rate = (
+        (policy_rate - expected_inflation)
+        if (policy_rate is not None and expected_inflation is not None)
+        else None
+    )
+
+    conditions = [
+        ConditionResult(
+            name="GDPギャップ",
+            met=(gdp_gap is not None and gdp_gap > 0),
+            value=gdp_gap,
+            threshold_desc="> 0%",
+            value_text=f"{gdp_gap:.2f}%" if gdp_gap is not None else "データなし",
+        ),
+        ConditionResult(
+            name="コアCPI（前年比）",
+            met=(core_cpi is not None and core_cpi > 1.5),
+            value=core_cpi,
+            threshold_desc="> 1.5%",
+            value_text=f"{core_cpi:.1f}%" if core_cpi is not None else "データなし",
+        ),
+        ConditionResult(
+            name="予想インフレ率（1年後）",
+            met=(expected_inflation is not None and expected_inflation > 1.5),
+            value=expected_inflation,
+            threshold_desc="> 1.5%",
+            value_text=f"{expected_inflation:.1f}%" if expected_inflation is not None else "データなし",
+        ),
+        ConditionResult(
+            name="賃金上昇率（所定内給与前年比）",
+            met=(wage is not None and wage > 3.0),
+            value=wage,
+            threshold_desc="> 3.0%",
+            value_text=f"{wage:.1f}%" if wage is not None else "データなし",
+        ),
+        ConditionResult(
+            name="実質金利 < 自然利子率",
+            met=(real_rate is not None and real_rate < NATURAL_RATE),
+            value=real_rate,
+            threshold_desc=f"< {NATURAL_RATE}%（自然利子率・定数）",
+            value_text=(
+                f"{real_rate:.2f}%（政策金利{policy_rate:.2f}% − 予想インフレ率{expected_inflation:.1f}%）"
+                if real_rate is not None else "データなし"
+            ),
+        ),
+    ]
+
+    met_count = sum(1 for c in conditions if c.met)
+    total_count = len(conditions)
+    score = met_count / total_count * 100
+
+    return PolicyCheckResult(
+        conditions=conditions,
+        score=score,
+        met_count=met_count,
+        total_count=total_count,
+    )
+
+
 def format_markdown_section(result: PolicyCheckResult) -> str:
     """PolicyCheckResult を Markdown セクション文字列に変換する。
 
