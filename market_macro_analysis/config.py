@@ -28,6 +28,12 @@ ESTAT_CPI_CAT01_CORE = "0161"                # 生鮮食品を除く総合（コ
 ESTAT_CPI_TAB_YOY = "3"                      # 前年同月比
 ESTAT_CPI_AREA_NATIONAL = "00000"            # 全国
 
+MHLW_WAGE_STATS_DATA_ID = "0003138254"       # 毎月勤労統計調査：就業形態別所定内給与 指数及び増減率
+
+BOJ_TANKAN_ZIP_URL = "https://www.stat-search.boj.or.jp/info/co.zip"
+# 企業物価見通し（大企業・全産業計・1年後の消費者物価変化率・中央値）
+BOJ_TANKAN_PRICE_OUTLOOK_CODE = "TK99F0000201HCQ00000"
+
 # Retry settings
 MAX_RETRY_COUNT = 3
 RETRY_WAIT_SECONDS = 10
