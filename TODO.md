@@ -40,7 +40,7 @@
 
 ---
 
-## Phase 2: シナリオ予測エンジン branch: `phase/2-scenario-prediction`
+## Phase 2: シナリオ予測エンジン branch: `phase/2-scenario-prediction`【完了・main マージ済み】
 
 ### REQ-8: 賃金上昇率データ取得・DB保存（厚労省毎月勤労統計）Issue #15 PR #20 ✅
 - [x] 厚労省 e-Stat から所定内給与前年比を取得
