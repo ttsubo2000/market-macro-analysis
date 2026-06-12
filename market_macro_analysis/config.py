@@ -28,6 +28,8 @@ ESTAT_CPI_CAT01_CORE = "0161"                # 生鮮食品を除く総合（コ
 ESTAT_CPI_TAB_YOY = "3"                      # 前年同月比
 ESTAT_CPI_AREA_NATIONAL = "00000"            # 全国
 
+MHLW_WAGE_STATS_DATA_ID = "0003138254"       # 毎月勤労統計調査：就業形態別所定内給与 指数及び増減率
+
 # Retry settings
 MAX_RETRY_COUNT = 3
 RETRY_WAIT_SECONDS = 10
