@@ -1,6 +1,7 @@
 import io
 import re
 import time
+from urllib.parse import urljoin
 import requests
 import sqlite3
 import openpyxl
@@ -32,9 +33,7 @@ def _resolve_latest_gap_url() -> str:
         raise FetchError("内閣府インデックスページで gap.xlsx のリンクが見つかりませんでした")
 
     href = matches[-1]
-    if href.startswith("http"):
-        return href
-    return "https://www.cao.go.jp" + (href if href.startswith("/") else "/" + href)
+    return urljoin(CAO_GDP_INDEX_URL, href)
 
 
 def fetch_gdp_gap(limit: int = 120) -> list[dict]:

@@ -95,7 +95,7 @@ def test_parse_xlsx_handles_none_year_in_first_q1():
     assert result[0]["date"] == "2025-Q2"
 
 
-_MOCK_GAP_URL = "https://www.cao.go.jp/keizai3/getsurei/2612gap.xlsx"
+_MOCK_GAP_URL = "https://www5.cao.go.jp/keizai3/getsurei/2612gap.xlsx"
 _MOCK_INDEX_HTML = '<a href="/keizai3/getsurei/2612gap.xlsx">GDPギャップ</a>'
 
 
