@@ -1,5 +1,5 @@
 import sqlite3
-from market_macro_analysis.service import chart_service, forecast_chart_service
+from market_macro_analysis.service import chart_service
 
 
 def make_chart(conn: sqlite3.Connection, block_type: str) -> None:
@@ -23,6 +23,3 @@ def make_chart(conn: sqlite3.Connection, block_type: str) -> None:
     if block_type == "all":
         path = chart_service.make_combined_chart(conn)
         print(f"[make_chart] 統合チャート: {path}")
-
-        path = forecast_chart_service.make_policy_rate_forecast_chart(conn)
-        print(f"[make_chart] 政策金利パス予測チャート: {path}")
