@@ -1,10 +1,11 @@
 import io
+import re
 import time
 import requests
 import sqlite3
 import openpyxl
 from market_macro_analysis.config import (
-    CAO_GDP_GAP_XLSX_URL,
+    CAO_GDP_INDEX_URL,
     MAX_RETRY_COUNT,
     RETRY_WAIT_SECONDS,
     REQUEST_TIMEOUT_SECONDS,
@@ -18,17 +19,34 @@ _QUARTER_MAP = {"Ⅰ": 1, "Ⅱ": 2, "Ⅲ": 3, "Ⅳ": 4}
 _DATA_START_ROW = 6
 
 
+def _resolve_latest_gap_url() -> str:
+    """インデックスページから最新の gap.xlsx URL を取得する。"""
+    try:
+        response = requests.get(CAO_GDP_INDEX_URL, timeout=REQUEST_TIMEOUT_SECONDS)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        raise FetchError(f"内閣府インデックスページへのアクセスに失敗しました: {e}") from e
+
+    matches = re.findall(r'href=["\']([^"\']*[0-9]{4}gap\.xlsx)["\']', response.text)
+    if not matches:
+        raise FetchError("内閣府インデックスページで gap.xlsx のリンクが見つかりませんでした")
+
+    href = matches[-1]
+    if href.startswith("http"):
+        return href
+    return "https://www.cao.go.jp" + (href if href.startswith("/") else "/" + href)
+
+
 def fetch_gdp_gap(limit: int = 120) -> list[dict]:
     """内閣府月例経済報告から需給ギャップ（四半期）を取得する。
 
     Returns:
         list of dict: [{"date": "2024-Q4", "value": 0.1}, ...]
     """
+    xlsx_url = _resolve_latest_gap_url()
     for attempt in range(MAX_RETRY_COUNT):
         try:
-            response = requests.get(
-                CAO_GDP_GAP_XLSX_URL, timeout=REQUEST_TIMEOUT_SECONDS
-            )
+            response = requests.get(xlsx_url, timeout=REQUEST_TIMEOUT_SECONDS)
             response.raise_for_status()
             records = _parse_xlsx(response.content)
             return records[-limit:] if len(records) > limit else records

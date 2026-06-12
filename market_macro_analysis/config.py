@@ -20,8 +20,7 @@ ESTAT_API_CONFIG_PATH = os.environ.get("ESTAT_API_CONFIG_PATH", "estat-api.toml"
 ESTAT_API_BASE_URL = "https://api.e-stat.go.jp/rest/3.0/app"
 BOJ_STATS_BASE_URL = "https://www.stat-search.boj.or.jp"
 BOJ_CALL_RATE_CSV_URL = "https://www.stat-search.boj.or.jp/ssi/mtshtml/csv/fm02_m_1.csv"
-CAO_GDP_BASE_URL = "https://www5.cao.go.jp/keizai3/getsurei"
-CAO_GDP_GAP_XLSX_URL = "https://www5.cao.go.jp/keizai3/getsurei/2542gap.xlsx"
+CAO_GDP_INDEX_URL = "https://www.cao.go.jp/keizai3/getsurei/getsurei-index.html"
 
 # e-Stat 統計ID
 ESTAT_CPI_STATS_DATA_ID = "0003427113"       # 2020年基準消費者物価指数

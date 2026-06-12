@@ -95,6 +95,40 @@ def test_parse_xlsx_handles_none_year_in_first_q1():
     assert result[0]["date"] == "2025-Q2"
 
 
+_MOCK_GAP_URL = "https://www.cao.go.jp/keizai3/getsurei/2612gap.xlsx"
+_MOCK_INDEX_HTML = '<a href="/keizai3/getsurei/2612gap.xlsx">GDPギャップ</a>'
+
+
+# --- _resolve_latest_gap_url ---
+
+def test_resolve_latest_gap_url_success():
+    mock_response = MagicMock()
+    mock_response.text = _MOCK_INDEX_HTML
+    mock_response.raise_for_status.return_value = None
+
+    with patch("requests.get", return_value=mock_response):
+        url = cao_gdp_service._resolve_latest_gap_url()
+
+    assert url == _MOCK_GAP_URL
+
+
+def test_resolve_latest_gap_url_raises_when_no_link():
+    mock_response = MagicMock()
+    mock_response.text = "<html>no gap link here</html>"
+    mock_response.raise_for_status.return_value = None
+
+    with patch("requests.get", return_value=mock_response):
+        with pytest.raises(FetchError):
+            cao_gdp_service._resolve_latest_gap_url()
+
+
+def test_resolve_latest_gap_url_raises_on_http_error():
+    import requests as req
+    with patch("requests.get", side_effect=req.RequestException("connection error")):
+        with pytest.raises(FetchError):
+            cao_gdp_service._resolve_latest_gap_url()
+
+
 # --- fetch_gdp_gap ---
 
 def test_fetch_gdp_gap_success():
@@ -102,8 +136,9 @@ def test_fetch_gdp_gap_success():
     mock_response.content = SAMPLE_XLSX_BYTES
     mock_response.raise_for_status.return_value = None
 
-    with patch("requests.get", return_value=mock_response):
-        result = cao_gdp_service.fetch_gdp_gap()
+    with patch("market_macro_analysis.service.cao_gdp_service._resolve_latest_gap_url", return_value=_MOCK_GAP_URL):
+        with patch("requests.get", return_value=mock_response):
+            result = cao_gdp_service.fetch_gdp_gap()
 
     assert len(result) == 6
     assert result[-1]["date"] == "2025-Q2"
@@ -115,8 +150,9 @@ def test_fetch_gdp_gap_respects_limit():
     mock_response.content = SAMPLE_XLSX_BYTES
     mock_response.raise_for_status.return_value = None
 
-    with patch("requests.get", return_value=mock_response):
-        result = cao_gdp_service.fetch_gdp_gap(limit=3)
+    with patch("market_macro_analysis.service.cao_gdp_service._resolve_latest_gap_url", return_value=_MOCK_GAP_URL):
+        with patch("requests.get", return_value=mock_response):
+            result = cao_gdp_service.fetch_gdp_gap(limit=3)
 
     assert len(result) == 3
     assert result[-1]["date"] == "2025-Q2"
@@ -128,9 +164,10 @@ def test_fetch_gdp_gap_retries_on_failure():
     mock_ok.content = SAMPLE_XLSX_BYTES
     mock_ok.raise_for_status.return_value = None
 
-    with patch("requests.get", side_effect=[req.RequestException("timeout"), mock_ok]) as mock_get:
-        with patch("time.sleep"):
-            result = cao_gdp_service.fetch_gdp_gap()
+    with patch("market_macro_analysis.service.cao_gdp_service._resolve_latest_gap_url", return_value=_MOCK_GAP_URL):
+        with patch("requests.get", side_effect=[req.RequestException("timeout"), mock_ok]) as mock_get:
+            with patch("time.sleep"):
+                result = cao_gdp_service.fetch_gdp_gap()
 
     assert mock_get.call_count == 2
     assert len(result) == 6
@@ -138,10 +175,11 @@ def test_fetch_gdp_gap_retries_on_failure():
 
 def test_fetch_gdp_gap_raises_after_max_retries():
     import requests as req
-    with patch("requests.get", side_effect=req.RequestException("timeout")):
-        with patch("time.sleep"):
-            with pytest.raises(FetchError):
-                cao_gdp_service.fetch_gdp_gap()
+    with patch("market_macro_analysis.service.cao_gdp_service._resolve_latest_gap_url", return_value=_MOCK_GAP_URL):
+        with patch("requests.get", side_effect=req.RequestException("timeout")):
+            with patch("time.sleep"):
+                with pytest.raises(FetchError):
+                    cao_gdp_service.fetch_gdp_gap()
 
 
 # --- save_gdp_gap ---
