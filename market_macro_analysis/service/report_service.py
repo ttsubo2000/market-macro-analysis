@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from market_macro_analysis.config import REPORT_DIR
 from market_macro_analysis.exceptions import ReportError
-from market_macro_analysis.service import policy_checker_service
+from market_macro_analysis.service import policy_checker_service, scenario_service
 
 
 # --- 信号機評価ロジック ---
@@ -160,6 +160,10 @@ def generate_summary(conn: sqlite3.Connection, output_dir: str = REPORT_DIR) -> 
         "",
     ]
     lines.append(policy_checker_service.format_markdown_section(policy_result))
+
+    # シナリオ比較セクションを追記
+    scenario_results = scenario_service.evaluate_all_scenarios()
+    lines.append(scenario_service.format_scenario_comparison(scenario_results))
 
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
