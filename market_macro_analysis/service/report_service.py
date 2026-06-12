@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from market_macro_analysis.config import REPORT_DIR
 from market_macro_analysis.exceptions import ReportError
-from market_macro_analysis.service import policy_checker_service, scenario_service
+from market_macro_analysis.service import policy_checker_service, scenario_service, forecast_chart_service
 
 
 # --- 信号機評価ロジック ---
@@ -164,6 +164,15 @@ def generate_summary(conn: sqlite3.Connection, output_dir: str = REPORT_DIR) -> 
     # シナリオ比較セクションを追記
     scenario_results = scenario_service.evaluate_all_scenarios()
     lines.append(scenario_service.format_scenario_comparison(scenario_results))
+
+    # 政策金利パス予測セクションを追記
+    current_rate = conn.execute(
+        "SELECT value FROM financial_data WHERE indicator = 'policy_rate' ORDER BY date DESC LIMIT 1"
+    ).fetchone()
+    current_rate_value = current_rate[0] if current_rate else None
+    lines.append(forecast_chart_service.format_forecast_summary(
+        policy_result, scenario_results, current_rate_value
+    ))
 
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
