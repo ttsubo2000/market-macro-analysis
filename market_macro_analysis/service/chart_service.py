@@ -171,6 +171,51 @@ def make_expected_inflation_chart(conn: sqlite3.Connection, output_dir: str = RE
     return filepath
 
 
+def make_inflation_gap_chart(conn: sqlite3.Connection, output_dir: str = REPORT_PNG_DIR) -> str:
+    """インフレギャップ（コアCPI − BEI月次平均）の時系列チャートを生成する。
+
+    BEI は日次データのため、月次平均を算出してコアCPI（月次）と突合する。
+
+    Returns:
+        str: 出力ファイルパス
+    """
+    cpi_rows = conn.execute(
+        "SELECT date, value FROM price_data WHERE indicator = 'core_cpi_yoy' ORDER BY date"
+    ).fetchall()
+    bei_rows = conn.execute(
+        "SELECT strftime('%Y-%m', date) AS month, AVG(value) AS bei_avg "
+        "FROM financial_data WHERE indicator = 'bei' GROUP BY month ORDER BY month"
+    ).fetchall()
+
+    cpi_map = {r[0]: r[1] for r in cpi_rows}
+    bei_map = {r[0]: r[1] for r in bei_rows}
+
+    months = sorted(set(cpi_map) & set(bei_map))
+    if not months:
+        raise ChartError("インフレギャップの算出に必要なデータが存在しません（CPI・BEI の両月次データが必要）")
+
+    dates = [datetime.strptime(m, "%Y-%m") for m in months]
+    gaps = [cpi_map[m] - bei_map[m] for m in months]
+
+    out = _ensure_output_dir(output_dir)
+    fig, ax = plt.subplots(figsize=(10, 4))
+    colors = ["#e63946" if v >= 0 else "#457b9d" for v in gaps]
+    ax.bar(dates, gaps, width=20, color=colors, alpha=0.8, label="インフレギャップ（CPI − BEI月次平均）")
+    ax.axhline(0, color="black", linewidth=0.8)
+    ax.set_title("インフレギャップ（コアCPI − BEI月次平均）", fontsize=13)
+    ax.set_ylabel("（%ポイント）")
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+    ax.legend(fontsize=9)
+    ax.grid(True, alpha=0.3, axis="y")
+    fig.tight_layout()
+
+    filepath = str(out / "inflation_gap_chart.png")
+    fig.savefig(filepath, dpi=150)
+    plt.close(fig)
+    return filepath
+
+
 def make_combined_chart(conn: sqlite3.Connection, output_dir: str = REPORT_PNG_DIR) -> str:
     """4指標（コアCPI・政策金利・GDPギャップ・企業物価見通し）の統合チャートを生成する。
 
