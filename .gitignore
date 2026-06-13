@@ -20,6 +20,7 @@ htmlcov/
 !docs/**/*.png
 .DS_Store
 report/
+!docs/report/
 logs/*
 !logs/.gitkeep
 
