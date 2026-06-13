@@ -208,77 +208,87 @@ def make_inflation_gap_chart(conn: sqlite3.Connection, output_dir: str = REPORT_
 
 
 def make_combined_chart(conn: sqlite3.Connection, output_dir: str = REPORT_PNG_DIR) -> str:
-    """4指標（コアCPI・政策金利・GDPギャップ・企業物価見通し）の統合チャートを生成する。
+    """5指標の統合チャートを生成する（見取り図の時計回り順）。
+
+    順番: GDPギャップ（経済）→ コアCPI → BEI → インフレギャップ（物価）→ 政策金利（金融）
 
     Returns:
         str: 出力ファイルパス
     """
-    cpi_dates, cpi_values = _load_monthly(conn, "price_data", "core_cpi_yoy")
-    rate_dates, rate_values = _load_monthly(conn, "financial_data", "policy_rate")
     gap_dates, gap_values = _load_quarterly(conn, "economic_data", "gdp_gap")
-
+    cpi_dates, cpi_values = _load_monthly(conn, "price_data", "core_cpi_yoy")
     bei_rows = conn.execute(
         "SELECT date, value FROM financial_data WHERE indicator = 'bei' ORDER BY date"
     ).fetchall()
-    inflation_dates = [datetime.strptime(r[0], "%Y-%m-%d") for r in bei_rows]
-    inflation_values = [r[1] for r in bei_rows]
+    bei_dates = [datetime.strptime(r[0], "%Y-%m-%d") for r in bei_rows]
+    bei_values = [r[1] for r in bei_rows]
+    gap_inf_dates = cpi_dates
+    gap_inf_values = [v - INFLATION_TARGET for v in cpi_values]
+    rate_dates, rate_values = _load_monthly(conn, "financial_data", "policy_rate")
 
-    if not cpi_dates and not rate_dates and not gap_dates and not inflation_dates:
+    if not gap_dates and not cpi_dates and not bei_dates and not rate_dates:
         raise ChartError("チャート生成に必要なデータが存在しません")
 
     out = _ensure_output_dir(output_dir)
-    fig, axes = plt.subplots(4, 1, figsize=(12, 13), sharex=False)
-    fig.suptitle("日銀マクロ経済モニタリング", fontsize=15, y=1.01)
+    fig, axes = plt.subplots(5, 1, figsize=(12, 16), sharex=False)
+    fig.suptitle("日銀マクロ経済モニタリング（見取り図）", fontsize=15, y=1.01)
 
-    # コアCPI
+    # 1. GDPギャップ（経済）
     ax0 = axes[0]
-    if cpi_dates:
-        ax0.plot(cpi_dates, cpi_values, color="#e63946", linewidth=1.5)
-        ax0.axhline(2.0, color="gray", linestyle="--", linewidth=0.8)
-    ax0.set_title("コアCPI（前年比）", fontsize=11)
+    if gap_dates:
+        ax0.bar(gap_dates, gap_values, width=60,
+                color=["#e63946" if v >= 0 else "#457b9d" for v in gap_values], alpha=0.7)
+        ax0.axhline(0, color="black", linewidth=0.8)
+    ax0.set_title("① 需給ギャップ（経済）", fontsize=11)
     ax0.set_ylabel("（%）")
     ax0.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
-    ax0.xaxis.set_major_locator(mdates.YearLocator(2))
-    ax0.grid(True, alpha=0.3)
+    ax0.xaxis.set_major_locator(mdates.YearLocator(5))
+    ax0.grid(True, alpha=0.3, axis="y")
 
-    # 政策金利
+    # 2. コアCPI（物価上昇率）
     ax1 = axes[1]
-    if rate_dates:
-        ax1.plot(rate_dates, rate_values, color="#457b9d", linewidth=1.5)
-    ax1.set_title("政策金利（月平均）", fontsize=11)
+    if cpi_dates:
+        ax1.plot(cpi_dates, cpi_values, color="#e63946", linewidth=1.5)
+        ax1.axhline(2.0, color="gray", linestyle="--", linewidth=0.8)
+    ax1.set_title("② コアCPI・物価上昇率（物価）", fontsize=11)
     ax1.set_ylabel("（%）")
     ax1.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
-    ax1.xaxis.set_major_locator(mdates.YearLocator(5))
+    ax1.xaxis.set_major_locator(mdates.YearLocator(2))
     ax1.grid(True, alpha=0.3)
 
-    # GDPギャップ
+    # 3. BEI（予想インフレ率）
     ax2 = axes[2]
-    if gap_dates:
-        ax2.bar(
-            gap_dates, gap_values,
-            width=60,
-            color=["#e63946" if v >= 0 else "#457b9d" for v in gap_values],
-            alpha=0.7,
-        )
-        ax2.axhline(0, color="black", linewidth=0.8)
-    ax2.set_title("需給ギャップ（四半期）", fontsize=11)
+    if bei_dates:
+        ax2.plot(bei_dates, bei_values, color="#2a9d8f", linewidth=1.5, marker="o", markersize=4)
+        ax2.axhline(2.0, color="gray", linestyle="--", linewidth=0.8)
+        ax2.axhline(1.5, color="#e9c46a", linestyle=":", linewidth=0.8)
+    ax2.set_title("③ BEI・予想インフレ率（物価）", fontsize=11)
     ax2.set_ylabel("（%）")
-    ax2.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
-    ax2.xaxis.set_major_locator(mdates.YearLocator(5))
-    ax2.grid(True, alpha=0.3, axis="y")
+    ax2.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+    ax2.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+    ax2.grid(True, alpha=0.3)
 
-    # 企業物価見通し（1年後）
+    # 4. インフレギャップ
     ax3 = axes[3]
-    if inflation_dates:
-        ax3.plot(inflation_dates, inflation_values, color="#2a9d8f", linewidth=1.5,
-                 marker="o", markersize=4)
-        ax3.axhline(2.0, color="gray", linestyle="--", linewidth=0.8)
-        ax3.axhline(1.5, color="#e9c46a", linestyle=":", linewidth=0.8)
-    ax3.set_title("BEI（期待インフレ率・日次）", fontsize=11)
-    ax3.set_ylabel("（%）")
-    ax3.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
-    ax3.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
-    ax3.grid(True, alpha=0.3)
+    if gap_inf_dates:
+        ax3.bar(gap_inf_dates, gap_inf_values, width=20,
+                color=["#e63946" if v >= 0 else "#457b9d" for v in gap_inf_values], alpha=0.8)
+        ax3.axhline(0, color="black", linewidth=0.8)
+    ax3.set_title("④ インフレギャップ・コアCPI − 2%目標（物価）", fontsize=11)
+    ax3.set_ylabel("（%pt）")
+    ax3.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+    ax3.xaxis.set_major_locator(mdates.YearLocator(2))
+    ax3.grid(True, alpha=0.3, axis="y")
+
+    # 5. 政策金利（金融）
+    ax4 = axes[4]
+    if rate_dates:
+        ax4.plot(rate_dates, rate_values, color="#457b9d", linewidth=1.5)
+    ax4.set_title("⑤ 政策金利（金融）", fontsize=11)
+    ax4.set_ylabel("（%）")
+    ax4.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+    ax4.xaxis.set_major_locator(mdates.YearLocator(5))
+    ax4.grid(True, alpha=0.3)
 
     fig.tight_layout()
 
