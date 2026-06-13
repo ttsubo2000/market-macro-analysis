@@ -19,6 +19,9 @@ def make_chart(conn: sqlite3.Connection, block_type: str) -> None:
         path = chart_service.make_expected_inflation_chart(conn)
         print(f"[make_chart] BEI（期待インフレ率）チャート: {path}")
 
+        path = chart_service.make_inflation_gap_chart(conn)
+        print(f"[make_chart] インフレギャップ チャート: {path}")
+
     if block_type in ("all", "economic"):
         path = chart_service.make_gdp_gap_chart(conn)
         print(f"[make_chart] GDPギャップ チャート: {path}")
