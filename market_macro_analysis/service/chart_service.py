@@ -226,6 +226,17 @@ def make_combined_chart(conn: sqlite3.Connection, output_dir: str = REPORT_PNG_D
     gap_inf_values = [v - INFLATION_TARGET for v in cpi_values]
     rate_dates, rate_values = _load_monthly(conn, "financial_data", "policy_rate")
 
+    # 実質金利：政策金利(月次) − BEI月次平均 で突合
+    bei_monthly_rows = conn.execute(
+        "SELECT strftime('%Y-%m', date) AS month, AVG(value) FROM financial_data "
+        "WHERE indicator = 'bei' GROUP BY month"
+    ).fetchall()
+    bei_monthly = {r[0]: r[1] for r in bei_monthly_rows}
+    rate_map = dict(zip([d.strftime("%Y-%m") for d in rate_dates], rate_values))
+    real_rate_months = sorted(set(rate_map) & set(bei_monthly))
+    real_rate_dates = [datetime.strptime(m, "%Y-%m") for m in real_rate_months]
+    real_rate_values = [rate_map[m] - bei_monthly[m] for m in real_rate_months]
+
     if not gap_dates and not cpi_dates and not bei_dates and not rate_dates:
         raise ChartError("チャート生成に必要なデータが存在しません")
 
@@ -280,15 +291,23 @@ def make_combined_chart(conn: sqlite3.Connection, output_dir: str = REPORT_PNG_D
     ax3.xaxis.set_major_locator(mdates.YearLocator(2))
     ax3.grid(True, alpha=0.3, axis="y")
 
-    # 5. 政策金利（金融）
+    # 5. 政策金利 + 実質金利 + 自然利子率（金融）
     ax4 = axes[4]
     if rate_dates:
-        ax4.plot(rate_dates, rate_values, color="#457b9d", linewidth=1.5)
-    ax4.set_title("⑤ 政策金利（金融）", fontsize=11)
+        ax4.plot(rate_dates, rate_values, color="#457b9d", linewidth=1.5, label="政策金利")
+    if real_rate_dates:
+        ax4.plot(real_rate_dates, real_rate_values, color="#f4a261", linewidth=1.5,
+                 marker="o", markersize=4, label="実質金利（= 政策金利 − BEI）")
+    ax4.axhline(0.5, color="gray", linestyle="--", linewidth=0.8,
+                label="自然利子率 0.5%（中立基準）")
+    ax4.set_title("⑤ 政策金利・実質金利（金融）", fontsize=11)
     ax4.set_ylabel("（%）")
     ax4.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     ax4.xaxis.set_major_locator(mdates.YearLocator(5))
     ax4.grid(True, alpha=0.3)
+    ax4.legend(fontsize=8, loc="upper left",
+               title="実質金利 < 0.5% → 緩和的　／　実質金利 > 0.5% → 引き締め的",
+               title_fontsize=7)
 
     fig.tight_layout()
 
