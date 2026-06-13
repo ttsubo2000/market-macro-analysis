@@ -190,12 +190,18 @@ def make_inflation_gap_chart(conn: sqlite3.Connection, output_dir: str = REPORT_
     cpi_map = {r[0]: r[1] for r in cpi_rows}
     bei_map = {r[0]: r[1] for r in bei_rows}
 
-    months = sorted(set(cpi_map) & set(bei_map))
-    if not months:
-        raise ChartError("インフレギャップの算出に必要なデータが存在しません（CPI・BEI の両月次データが必要）")
+    if not cpi_map or not bei_map:
+        raise ChartError("インフレギャップの算出に必要なデータが存在しません（CPI・BEI 両方のデータが必要）")
 
-    dates = [datetime.strptime(m, "%Y-%m") for m in months]
-    gaps = [cpi_map[m] - bei_map[m] for m in months]
+    bei_months = sorted(bei_map.keys())
+    dates = []
+    gaps = []
+    for cpi_month in sorted(cpi_map.keys()):
+        cpi_dt = datetime.strptime(cpi_month, "%Y-%m")
+        closest = min(bei_months, key=lambda m: abs((datetime.strptime(m, "%Y-%m") - cpi_dt).days))
+        if abs((datetime.strptime(closest, "%Y-%m") - cpi_dt).days) <= 92:  # 3ヶ月以内
+            dates.append(cpi_dt)
+            gaps.append(cpi_map[cpi_month] - bei_map[closest])
 
     out = _ensure_output_dir(output_dir)
     fig, ax = plt.subplots(figsize=(10, 4))
