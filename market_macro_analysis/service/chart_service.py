@@ -171,47 +171,32 @@ def make_expected_inflation_chart(conn: sqlite3.Connection, output_dir: str = RE
     return filepath
 
 
-def make_inflation_gap_chart(conn: sqlite3.Connection, output_dir: str = REPORT_PNG_DIR) -> str:
-    """インフレギャップ（コアCPI − BEI月次平均）の時系列チャートを生成する。
+INFLATION_TARGET = 2.0  # 日銀の物価安定目標（%）
 
-    BEI は日次データのため、月次平均を算出してコアCPI（月次）と突合する。
+
+def make_inflation_gap_chart(conn: sqlite3.Connection, output_dir: str = REPORT_PNG_DIR) -> str:
+    """インフレギャップ（コアCPI − 物価安定目標2%）の時系列チャートを生成する。
+
+    テイラールール定義: インフレギャップ = 実際のインフレ率 − 目標インフレ率（2%）
 
     Returns:
         str: 出力ファイルパス
     """
-    cpi_rows = conn.execute(
-        "SELECT date, value FROM price_data WHERE indicator = 'core_cpi_yoy' ORDER BY date"
-    ).fetchall()
-    bei_rows = conn.execute(
-        "SELECT strftime('%Y-%m', date) AS month, AVG(value) AS bei_avg "
-        "FROM financial_data WHERE indicator = 'bei' GROUP BY month ORDER BY month"
-    ).fetchall()
+    dates, values = _load_monthly(conn, "price_data", "core_cpi_yoy")
+    if not dates:
+        raise ChartError("コアCPI のデータが存在しません")
 
-    cpi_map = {r[0]: r[1] for r in cpi_rows}
-    bei_map = {r[0]: r[1] for r in bei_rows}
-
-    if not cpi_map or not bei_map:
-        raise ChartError("インフレギャップの算出に必要なデータが存在しません（CPI・BEI 両方のデータが必要）")
-
-    bei_months = sorted(bei_map.keys())
-    dates = []
-    gaps = []
-    for cpi_month in sorted(cpi_map.keys()):
-        cpi_dt = datetime.strptime(cpi_month, "%Y-%m")
-        closest = min(bei_months, key=lambda m: abs((datetime.strptime(m, "%Y-%m") - cpi_dt).days))
-        if abs((datetime.strptime(closest, "%Y-%m") - cpi_dt).days) <= 92:  # 3ヶ月以内
-            dates.append(cpi_dt)
-            gaps.append(cpi_map[cpi_month] - bei_map[closest])
+    gaps = [v - INFLATION_TARGET for v in values]
 
     out = _ensure_output_dir(output_dir)
     fig, ax = plt.subplots(figsize=(10, 4))
     colors = ["#e63946" if v >= 0 else "#457b9d" for v in gaps]
-    ax.bar(dates, gaps, width=20, color=colors, alpha=0.8, label="インフレギャップ（CPI − BEI月次平均）")
+    ax.bar(dates, gaps, width=20, color=colors, alpha=0.8, label="インフレギャップ（コアCPI − 2%目標）")
     ax.axhline(0, color="black", linewidth=0.8)
-    ax.set_title("インフレギャップ（コアCPI − BEI月次平均）", fontsize=13)
+    ax.set_title("インフレギャップ（コアCPI − 物価安定目標 2%）", fontsize=13)
     ax.set_ylabel("（%ポイント）")
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
-    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+    ax.xaxis.set_major_locator(mdates.YearLocator(2))
     ax.legend(fontsize=9)
     ax.grid(True, alpha=0.3, axis="y")
     fig.tight_layout()
