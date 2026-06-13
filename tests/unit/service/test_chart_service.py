@@ -163,3 +163,29 @@ def test_make_combined_chart_creates_output_dir(db_with_all_data, tmp_path):
     nested = str(tmp_path / "nested" / "dir")
     filepath = chart_service.make_combined_chart(db_with_all_data, output_dir=nested)
     assert Path(filepath).exists()
+
+
+# --- make_expected_inflation_chart（BEI チャート）---
+
+@pytest.fixture
+def db_with_bei(db_conn):
+    """BEI データを投入した DB コネクション。"""
+    db_conn.execute(
+        "CREATE TABLE financial_data (date TEXT, indicator TEXT, value REAL, unit TEXT, PRIMARY KEY (date, indicator))"
+    )
+    db_conn.executemany(
+        "INSERT INTO financial_data VALUES (?, 'bei', ?, '%')",
+        [("2026-05-27", 2.245), ("2026-05-28", 2.208), ("2026-05-29", 2.172)],
+    )
+    return db_conn
+
+
+def test_make_expected_inflation_chart_creates_file(db_with_bei, tmp_path):
+    filepath = chart_service.make_expected_inflation_chart(db_with_bei, output_dir=str(tmp_path))
+    assert Path(filepath).exists()
+    assert filepath.endswith("expected_inflation_chart.png")
+
+
+def test_make_expected_inflation_chart_raises_when_no_data(empty_tables, tmp_path):
+    with pytest.raises(ChartError):
+        chart_service.make_expected_inflation_chart(empty_tables, output_dir=str(tmp_path))

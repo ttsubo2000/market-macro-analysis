@@ -45,7 +45,7 @@ def check_rate_hike_conditions(conn: sqlite3.Connection) -> PolicyCheckResult:
     """
     gdp_gap = _latest_value(conn, "economic_data", "gdp_gap")
     core_cpi = _latest_value(conn, "price_data", "core_cpi_yoy")
-    expected_inf = _latest_value(conn, "financial_data", "expected_inflation_1y")
+    expected_inf = _latest_value(conn, "financial_data", "bei")
     wage = _latest_value(conn, "economic_data", "scheduled_wage_yoy")
     policy_rate = _latest_value(conn, "financial_data", "policy_rate")
 

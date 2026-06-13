@@ -70,7 +70,7 @@ def test_latest_value_returns_none_when_no_data(db_conn):
 def _insert_all_conditions(conn, gdp_gap, core_cpi, expected_inf, wage, policy_rate):
     _insert(conn, "economic_data", "2026-Q1", "gdp_gap", gdp_gap)
     _insert(conn, "price_data", "2026-03", "core_cpi_yoy", core_cpi)
-    _insert(conn, "financial_data", "2026-Q1", "expected_inflation_1y", expected_inf)
+    _insert(conn, "financial_data", "2026-03-31", "bei", expected_inf)
     _insert(conn, "economic_data", "2026-03", "scheduled_wage_yoy", wage)
     _insert(conn, "financial_data", "2026-03", "policy_rate", policy_rate)
 
