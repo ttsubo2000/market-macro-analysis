@@ -305,7 +305,7 @@ def make_combined_chart(conn: sqlite3.Connection, output_dir: str = REPORT_PNG_D
     ax4.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     ax4.xaxis.set_major_locator(mdates.YearLocator(5))
     ax4.grid(True, alpha=0.3)
-    ax4.legend(fontsize=8, loc="upper left",
+    ax4.legend(fontsize=8, loc="lower left",
                title="実質金利 < 0.5% → 緩和的　／　実質金利 > 0.5% → 引き締め的",
                title_fontsize=7)
 
