@@ -133,25 +133,34 @@ def make_gdp_gap_chart(conn: sqlite3.Connection, output_dir: str = REPORT_PNG_DI
 
 
 def make_expected_inflation_chart(conn: sqlite3.Connection, output_dir: str = REPORT_PNG_DIR) -> str:
-    """企業物価見通し（1年後）の時系列チャートを生成する。
+    """BEI（ブレーク・イーブン・インフレ率）の時系列チャートを生成する。
+
+    データソース: stock-marketdata.com（日本相互証券ベース）の日次 BEI。
+    週次実行のたびに1点ずつ蓄積される。
 
     Returns:
         str: 出力ファイルパス
     """
-    dates, values = _load_quarterly(conn, "financial_data", "expected_inflation_1y")
-    if not dates:
-        raise ChartError("企業物価見通しのデータが存在しません")
+    rows = conn.execute(
+        "SELECT date, value FROM financial_data WHERE indicator = ? ORDER BY date",
+        ("bei",),
+    ).fetchall()
+    if not rows:
+        raise ChartError("BEI のデータが存在しません")
+
+    dates = [datetime.strptime(r[0], "%Y-%m-%d") for r in rows]
+    values = [r[1] for r in rows]
 
     out = _ensure_output_dir(output_dir)
     fig, ax = plt.subplots(figsize=(10, 4))
     ax.plot(dates, values, color="#2a9d8f", linewidth=1.5, marker="o", markersize=4,
-            label="企業物価見通し（1年後・大企業・全産業計）")
+            label="BEI（期待インフレ率・日次）")
     ax.axhline(2.0, color="gray", linestyle="--", linewidth=0.8, label="目標 2%")
     ax.axhline(1.5, color="#e9c46a", linestyle=":", linewidth=0.8, label="判定閾値 1.5%")
-    ax.set_title("企業物価見通し（1年後の消費者物価変化率・中央値）", fontsize=13)
+    ax.set_title("BEI（ブレーク・イーブン・インフレ率）", fontsize=13)
     ax.set_ylabel("（%）")
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
-    ax.xaxis.set_major_locator(mdates.YearLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
     ax.legend(fontsize=9)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
@@ -171,7 +180,12 @@ def make_combined_chart(conn: sqlite3.Connection, output_dir: str = REPORT_PNG_D
     cpi_dates, cpi_values = _load_monthly(conn, "price_data", "core_cpi_yoy")
     rate_dates, rate_values = _load_monthly(conn, "financial_data", "policy_rate")
     gap_dates, gap_values = _load_quarterly(conn, "economic_data", "gdp_gap")
-    inflation_dates, inflation_values = _load_quarterly(conn, "financial_data", "expected_inflation_1y")
+
+    bei_rows = conn.execute(
+        "SELECT date, value FROM financial_data WHERE indicator = 'bei' ORDER BY date"
+    ).fetchall()
+    inflation_dates = [datetime.strptime(r[0], "%Y-%m-%d") for r in bei_rows]
+    inflation_values = [r[1] for r in bei_rows]
 
     if not cpi_dates and not rate_dates and not gap_dates and not inflation_dates:
         raise ChartError("チャート生成に必要なデータが存在しません")
@@ -224,10 +238,10 @@ def make_combined_chart(conn: sqlite3.Connection, output_dir: str = REPORT_PNG_D
                  marker="o", markersize=4)
         ax3.axhline(2.0, color="gray", linestyle="--", linewidth=0.8)
         ax3.axhline(1.5, color="#e9c46a", linestyle=":", linewidth=0.8)
-    ax3.set_title("企業物価見通し・1年後（四半期）", fontsize=11)
+    ax3.set_title("BEI（期待インフレ率・日次）", fontsize=11)
     ax3.set_ylabel("（%）")
-    ax3.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
-    ax3.xaxis.set_major_locator(mdates.YearLocator())
+    ax3.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+    ax3.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
     ax3.grid(True, alpha=0.3)
 
     fig.tight_layout()
