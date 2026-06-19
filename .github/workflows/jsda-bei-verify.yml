@@ -4,6 +4,8 @@ name: JSDA BEI Verify
 # まずは手動実行で動作確認し、問題なければスケジュールを有効化する想定。
 on:
   workflow_dispatch: {}
+  push:
+    branches: [feature/req-20-jsda-bei-actions]  # 動作確認用・マージ後に削除
   # schedule:
   #   # 毎週月曜 09:00 JST (= 00:00 UTC) に実行する例。本番運用時にコメントアウトを外す。
   #   - cron: "0 0 * * 1"
