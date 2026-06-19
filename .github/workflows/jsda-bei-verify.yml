@@ -1,0 +1,38 @@
+name: JSDA BEI Verify
+
+# 手動実行（workflow_dispatch）と、本番運用を想定した週次スケジュールの両方を用意。
+# まずは手動実行で動作確認し、問題なければスケジュールを有効化する想定。
+on:
+  workflow_dispatch: {}
+  # schedule:
+  #   # 毎週月曜 09:00 JST (= 00:00 UTC) に実行する例。本番運用時にコメントアウトを外す。
+  #   - cron: "0 0 * * 1"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run verify
+        run: python fetch_jsda_bei.py verify 2>&1 | tee verify_result.txt
+
+      - name: Run for today (本番運用時のデータ取得相当)
+        if: false  # 検証目的のため一旦無効化。本番運用時に true に変更。
+        run: python fetch_jsda_bei.py
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jsda-bei-verify-result
+          path: verify_result.txt
