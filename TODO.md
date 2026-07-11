@@ -107,3 +107,9 @@
 - [ ] セクター影響スクリーニング（yfinance連携）
 - [ ] 日銀MPMカレンダー連携
 - [ ] 指標閾値アラート機能
+
+### REQ-20: JSDA BEI 自動取得ワークフロー（GitHub Actions）の追加 Issue #38 PR #39 ❌断念
+- [x] `fetch_jsda_bei.py` 実装・GitHub Actions ワークフロー実装（PR #39）
+- [x] GitHub Actions 上で実行検証 → JSDA（`market.jsda.or.jp`）への接続がすべて ConnectTimeoutError
+- 結論: JSDA 側が GitHub Actions ランナー（Azure ホスト型 IP）からのアクセスをブロックしていると判断。実現不可能につき Issue #38 は not planned でクローズ、PR #39 はマージせずクローズ
+- 代替手段（ローカル環境での定期実行・他データソース）が必要な場合は別 Issue で再検討
