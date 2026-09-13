@@ -5,7 +5,7 @@ matplotlib.use("Agg")  # GUI不要のバックエンド
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import japanize_matplotlib  # noqa: F401  日本語フォント有効化
-from datetime import datetime
+from datetime import datetime, timedelta
 from market_macro_analysis.config import REPORT_PNG_DIR
 from market_macro_analysis.exceptions import ChartError
 
@@ -41,6 +41,41 @@ def _ensure_output_dir(path: str) -> Path:
     out = Path(path)
     out.mkdir(parents=True, exist_ok=True)
     return out
+
+
+BEI_MAX_GAP_DAYS = 5  # これ以上あいたら欠測とみなし、折れ線を分断する
+
+
+def _split_series_on_gaps(
+    dates: list, values: list, max_gap_days: int = BEI_MAX_GAP_DAYS
+) -> tuple[list, list]:
+    """欠測区間に NaN を挟み、折れ線が直線で接続されないようにする。
+
+    隣接する2点の間隔が max_gap_days を超える場合、前の点の翌日に NaN を1点挿入する。
+    元データは変更せず、描画用の系列を新たに組み立てて返す。
+
+    Returns:
+        tuple[list, list]: (dates, values) NaN 挿入済みの描画用系列
+    """
+    plot_dates: list = []
+    plot_values: list = []
+    for i, (date, value) in enumerate(zip(dates, values)):
+        if i and (date - dates[i - 1]).days > max_gap_days:
+            plot_dates.append(dates[i - 1] + timedelta(days=1))
+            plot_values.append(float("nan"))
+        plot_dates.append(date)
+        plot_values.append(value)
+    return plot_dates, plot_values
+
+
+def _apply_bei_time_axis(ax) -> None:
+    """BEI（日次・数ヶ月スパン）用の X 軸目盛りを設定する。
+
+    BEI は取得元の制約で数ヶ月分しか蓄積されないため、年単位・3ヶ月単位では
+    目盛りが1本しか立たない。1ヶ月刻みにして時点を読み取れるようにする。
+    """
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
 
 
 def make_cpi_chart(conn: sqlite3.Connection, output_dir: str = REPORT_PNG_DIR) -> str:
@@ -151,16 +186,17 @@ def make_expected_inflation_chart(conn: sqlite3.Connection, output_dir: str = RE
     dates = [datetime.strptime(r[0], "%Y-%m-%d") for r in rows]
     values = [r[1] for r in rows]
 
+    plot_dates, plot_values = _split_series_on_gaps(dates, values)
+
     out = _ensure_output_dir(output_dir)
     fig, ax = plt.subplots(figsize=(10, 4))
-    ax.plot(dates, values, color="#2a9d8f", linewidth=1.5, marker="o", markersize=4,
+    ax.plot(plot_dates, plot_values, color="#2a9d8f", linewidth=1.5, marker="o", markersize=4,
             label="BEI（期待インフレ率・日次）")
     ax.axhline(2.0, color="gray", linestyle="--", linewidth=0.8, label="目標 2%")
     ax.axhline(1.5, color="#e9c46a", linestyle=":", linewidth=0.8, label="判定閾値 1.5%")
     ax.set_title("BEI（ブレーク・イーブン・インフレ率）", fontsize=13)
     ax.set_ylabel("（%）")
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
-    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+    _apply_bei_time_axis(ax)
     ax.legend(fontsize=9)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
@@ -270,13 +306,14 @@ def make_combined_chart(conn: sqlite3.Connection, output_dir: str = REPORT_PNG_D
     # 3. BEI（予想インフレ率）
     ax2 = axes[2]
     if bei_dates:
-        ax2.plot(bei_dates, bei_values, color="#2a9d8f", linewidth=1.5, marker="o", markersize=4)
+        bei_plot_dates, bei_plot_values = _split_series_on_gaps(bei_dates, bei_values)
+        ax2.plot(bei_plot_dates, bei_plot_values, color="#2a9d8f", linewidth=1.5,
+                 marker="o", markersize=4)
         ax2.axhline(2.0, color="gray", linestyle="--", linewidth=0.8)
         ax2.axhline(1.5, color="#e9c46a", linestyle=":", linewidth=0.8)
     ax2.set_title("③ BEI・予想インフレ率（物価）", fontsize=11)
     ax2.set_ylabel("（%）")
-    ax2.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
-    ax2.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+    _apply_bei_time_axis(ax2)
     ax2.grid(True, alpha=0.3)
 
     # 4. インフレギャップ
