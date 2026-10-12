@@ -1,3 +1,4 @@
+import re
 import time
 import sqlite3
 import requests
@@ -39,7 +40,7 @@ def _parse_html(content: bytes) -> list[dict]:
     """HTML から BEI の日付・値のリストを返す。
 
     stock-marketdata.com/bei.html のテーブル構造:
-      列0: 日付（YYYY/MM/DD 形式）
+      列0: 日付（YYYY年M月D日 形式。旧書式の YYYY/MM/DD 形式も読める）
       列1: BEI 値（%）
     直近12営業日分のデータが静的テーブルに含まれる。
     """
@@ -71,8 +72,15 @@ def _parse_html(content: bytes) -> list[dict]:
     return sorted(result, key=lambda x: x["date"])
 
 
+_JP_DATE_PATTERN = re.compile(r"(\d{4})年(\d{1,2})月(\d{1,2})日")
+
+
 def _parse_date(date_text: str) -> str | None:
-    """'YYYY/MM/DD' 形式を 'YYYY-MM-DD' に変換する。不正な場合は None を返す。"""
+    """'YYYY年M月D日' または 'YYYY/MM/DD' 形式を 'YYYY-MM-DD' に変換する。不正な場合は None を返す。"""
+    jp = _JP_DATE_PATTERN.fullmatch(date_text)
+    if jp:
+        year, month, day = jp.groups()
+        return f"{year}-{month.zfill(2)}-{day.zfill(2)}"
     parts = date_text.replace("-", "/").split("/")
     if len(parts) != 3:
         return None

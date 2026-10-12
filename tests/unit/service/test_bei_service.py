@@ -26,6 +26,33 @@ SAMPLE_HTML_SINGLE = """
 </body></html>
 """.encode("utf-8")
 
+SAMPLE_HTML_JP_DATE = """
+<html><body>
+<table class="data-table">
+
+<caption class="data-table-caption">
+    © 株式マーケットデータ
+</caption>
+
+<thead>
+<tr>
+<th style="background:#ddeeee;font-weight:bold;">
+    日付
+</th>
+
+<th style="background:#ddeeee;font-weight:bold;">
+    期待インフレ率（BEI）
+</th>
+
+<th style="background:#ddeeee;font-weight:bold;">
+    前日比
+</th>
+</tr></thead><tbody><tr><td>2026年9月30日</td><td>2.117</td><td><span style="color:#009900;">-0.026</span></td></tr><tr><td>2026年9月29日</td><td>2.143</td><td><span style="color:#000000;">+0.000</span></td></tr><tr><td>2026年9月28日</td><td>2.143</td><td><span style="color:#009900;">-0.031</span></td></tr>
+</tbody>
+</table>
+</body></html>
+""".encode("utf-8")
+
 SAMPLE_HTML_NO_DATA = """
 <html><body><p>データなし</p></body></html>
 """.encode("utf-8")
@@ -53,6 +80,26 @@ def test_parse_date_wrong_year_length():
     assert bei_service._parse_date("26/05/29") is None
 
 
+def test_parse_date_japanese_format():
+    assert bei_service._parse_date("2026年9月30日") == "2026-09-30"
+
+
+def test_parse_date_japanese_format_double_digit_month_day():
+    assert bei_service._parse_date("2026年12月15日") == "2026-12-15"
+
+
+def test_parse_date_japanese_format_single_digit_month_day():
+    assert bei_service._parse_date("2026年1月5日") == "2026-01-05"
+
+
+def test_parse_date_japanese_format_missing_day_marker():
+    assert bei_service._parse_date("2026年9月30") is None
+
+
+def test_parse_date_japanese_format_month_only():
+    assert bei_service._parse_date("2026年9月") is None
+
+
 # --- _parse_html ---
 
 def test_parse_html_extracts_all_rows():
@@ -70,6 +117,19 @@ def test_parse_html_correct_values():
     result = bei_service._parse_html(SAMPLE_HTML)
     latest = [r for r in result if r["date"] == "2026-05-29"][0]
     assert latest["value"] == pytest.approx(2.172)
+
+
+def test_parse_html_japanese_date_extracts_all_rows():
+    result = bei_service._parse_html(SAMPLE_HTML_JP_DATE)
+    assert [r["date"] for r in result] == ["2026-09-28", "2026-09-29", "2026-09-30"]
+
+
+def test_parse_html_japanese_date_correct_values():
+    result = bei_service._parse_html(SAMPLE_HTML_JP_DATE)
+    by_date = {r["date"]: r["value"] for r in result}
+    assert by_date["2026-09-30"] == pytest.approx(2.117)
+    assert by_date["2026-09-29"] == pytest.approx(2.143)
+    assert by_date["2026-09-28"] == pytest.approx(2.143)
 
 
 def test_parse_html_empty_returns_empty():
