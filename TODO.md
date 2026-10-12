@@ -122,3 +122,10 @@
 - [x] README の BEIチャート節に「線の分断＝欠測」を追記
 - 対象外: インフレギャップ・コアCPI・政策金利・需給ギャップの各チャート、`forecast_chart_service.py`（呼び出し元0件）
 - 背景: BEI は取得元が最新10営業日分しか掲載せず、月1回実行のため各月とも月後半10営業日のみ蓄積されている
+
+### REQ-22: BEI 取得が 0 件になる（取得元の日付書式が「YYYY年M月D日」に変わった）Issue #42
+- [ ] `_parse_date` で `YYYY年M月D日` も読む（旧書式 `YYYY/MM/DD` も残す）
+- [ ] 取得元と同じ表構造（`table.data-table`・`thead`・3 列目 `span`）の fixture でユニットテストを追加
+- [ ] `_parse_html`・`_parse_date` の docstring の書式説明を更新
+- [ ] マージ後に `fetch_data financial` で BEI N≥1 件・最新日 2026-09-30 以降を確認
+- 背景: 2026-10-12 の `fetch_data all` は SUCCESS だったが BEI は 0 件（気づいたのは出力の目視）
